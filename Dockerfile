@@ -1,36 +1,31 @@
 # ------------------------------
 # 1. Build Stage
 # ------------------------------
-FROM node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 WORKDIR /app
 
-# Copy dependency files
 COPY package.json package-lock.json ./
+RUN npm ci
 
-# Use npm install (more stable on Jenkins VM)
-RUN npm install --legacy-peer-deps --verbose
-
-# Copy full project
 COPY . .
 
-# Build standalone Next.js output
+# Build standalone Next.js app
 RUN npm run build
 
 # ------------------------------
 # 2. Run Stage
 # ------------------------------
-FROM node:20-alpine AS runner
+FROM node:20-slim AS runner
 
 WORKDIR /app
-
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# Copy standalone output (Next.js standalone build)
+# Copy Next.js standalone output
 COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/public ./public
 COPY --from=builder /app/.next/static ./.next/static
+COPY --from=builder /app/public ./public
 
 EXPOSE 3000
 

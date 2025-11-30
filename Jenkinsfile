@@ -7,14 +7,12 @@ pipeline {
 
     stages {
 
-        // -------------------------
         stage('Clean Workspace') {
             steps {
                 cleanWs()
             }
         }
 
-        // -------------------------
         stage('Checkout Source') {
             steps {
                 checkout([
@@ -27,7 +25,6 @@ pipeline {
             }
         }
 
-        // -------------------------
         stage('Prepare Environment File') {
             steps {
                 withCredentials([file(credentialsId: 'envfile', variable: 'ENV_FILE')]) {
@@ -35,34 +32,28 @@ pipeline {
                         echo "Copying environment file..."
                         cp $ENV_FILE .env
                         cp $ENV_FILE .env.local
-                        ls -la
                     '''
                 }
             }
         }
 
-        // -------------------------
         stage('Build Docker Image') {
             steps {
-                retry(2) {
-                    sh 'sudo docker compose build --no-cache'
-                }
+                sh 'docker compose build --no-cache'
             }
         }
 
-        // -------------------------
         stage('Deploy Application') {
             steps {
-                sh 'sudo docker compose down || true'
-                sh 'sudo docker compose up -d'
+                sh 'docker compose down || true'
+                sh 'docker compose up -d'
             }
         }
 
-        // -------------------------
         stage("Health Check") {
             steps {
                 script {
-                    sleep 10  // give container time to boot
+                    sleep 8
 
                     def status = sh(
                         script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000",
@@ -70,7 +61,7 @@ pipeline {
                     ).trim()
 
                     if (status != "200" && status != "304") {
-                        error("❌ Health check failed (status: ${status})")
+                        error("Health check FAILED → HTTP ${status}")
                     }
                 }
             }
