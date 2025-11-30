@@ -27,7 +27,14 @@ pipeline {
 
         stage('Prepare Environment File') {
             steps {
-                sh 'cp .env .env.local || true'
+                withCredentials([file(credentialsId: 'envfile', variable: 'ENV_FILE')]) {
+                    sh '''
+                        echo "Copying environment file..."
+                        cp $ENV_FILE .env
+                        cp $ENV_FILE .env.local
+                        ls -la
+                    '''
+                }
             }
         }
 
@@ -47,7 +54,7 @@ pipeline {
         stage("Health Check") {
             steps {
                 script {
-                    sleep 8 
+                    sleep 8  // allow boot time
 
                     def status = sh(
                         script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000",
