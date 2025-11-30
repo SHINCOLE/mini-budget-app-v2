@@ -40,7 +40,7 @@ export default function Dashboard() {
         
         {/* Dashboard Title + User Display */}
         <div className="flex items-center gap-4">
-          <h1 className="text-2xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold">MiniBudget</h1>
 
           {userEmail && (
             <div className="flex items-center gap-2">
