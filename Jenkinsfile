@@ -34,8 +34,8 @@ pipeline {
                 withCredentials([file(credentialsId: 'envfile', variable: 'ENV_FILE')]) {
                     sh '''
                         echo "Copying environment file..."
-                        cp $ENV_FILE .env
-                        cp $ENV_FILE .env.local
+                        cp "$ENV_FILE" .env
+                        cp "$ENV_FILE" .env.local
                         chmod 600 .env .env.local
                         echo "[OK] Environment files ready"
                     '''
@@ -58,7 +58,7 @@ pipeline {
             steps {
                 wrap([$class: 'AnsiColorBuildWrapper', colorMapName: 'xterm']) {
                     sh '''
-                        echo "🚀 Starting application..."
+                        echo "🚀 Deploying..."
                         docker compose down || true
                         docker compose up -d
                     '''
@@ -72,14 +72,15 @@ pipeline {
                     echo "⌛ Waiting for app to boot..."
                     sleep 12
 
+                    // ESCAPED $2 properly → \\$2
                     def status = sh(
-                        script: "curl -I -s http://localhost:3000 | head -n 1 | awk '{print $2}'",
+                        script: """curl -I -s http://localhost:3000 | head -n 1 | awk '{print \\$2}'""",
                         returnStdout: true
                     ).trim()
 
                     echo "HTTP Status: ${status}"
 
-                    if (!(status in ["200","307","301"])) {
+                    if (!(status in ["200", "307", "301"])) {
                         error("❌ Health check failed → HTTP ${status}")
                     }
                 }
