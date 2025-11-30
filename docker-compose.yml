@@ -2,10 +2,12 @@ version: "3.9"
 
 services:
   nextjs-app:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: nextjs-budget-app
     ports:
       - "3000:3000"
     env_file:
-      - .env
+      - .env.production
     restart: always

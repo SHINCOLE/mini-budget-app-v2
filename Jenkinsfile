@@ -7,6 +7,12 @@ pipeline {
 
     stages {
 
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
         stage('Checkout Source') {
             steps {
                 checkout([
@@ -21,22 +27,21 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh 'docker-compose build --no-cache'
+                sh 'docker compose build --no-cache'
             }
         }
 
         stage('Deploy Application') {
             steps {
-                sh 'docker-compose down'
-                sh 'docker-compose up -d'
+                sh 'docker compose down || true'
+                sh 'docker compose up -d'
             }
         }
 
         stage("Health Check") {
             steps {
                 script {
-                    // wait for container to start
-                    sleep 5
+                    sleep 8 // allow boot time
 
                     def status = sh(
                         script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000",
