@@ -7,12 +7,14 @@ pipeline {
 
     stages {
 
+        // -------------------------
         stage('Clean Workspace') {
             steps {
                 cleanWs()
             }
         }
 
+        // -------------------------
         stage('Checkout Source') {
             steps {
                 checkout([
@@ -25,6 +27,7 @@ pipeline {
             }
         }
 
+        // -------------------------
         stage('Prepare Environment File') {
             steps {
                 withCredentials([file(credentialsId: 'envfile', variable: 'ENV_FILE')]) {
@@ -38,23 +41,28 @@ pipeline {
             }
         }
 
+        // -------------------------
         stage('Build Docker Image') {
             steps {
-                sh 'docker compose build --no-cache'
+                retry(2) {
+                    sh 'sudo docker compose build --no-cache'
+                }
             }
         }
 
+        // -------------------------
         stage('Deploy Application') {
             steps {
-                sh 'docker compose down || true'
-                sh 'docker compose up -d'
+                sh 'sudo docker compose down || true'
+                sh 'sudo docker compose up -d'
             }
         }
 
+        // -------------------------
         stage("Health Check") {
             steps {
                 script {
-                    sleep 8  // allow boot time
+                    sleep 10  // give container time to boot
 
                     def status = sh(
                         script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000",
@@ -62,7 +70,7 @@ pipeline {
                     ).trim()
 
                     if (status != "200" && status != "304") {
-                        error("Health check failed. HTTP status: ${status}")
+                        error("❌ Health check failed (status: ${status})")
                     }
                 }
             }
@@ -71,10 +79,10 @@ pipeline {
 
     post {
         success {
-            echo 'Deployment succeeded!'
+            echo '🎉 Deployment succeeded!'
         }
         failure {
-            echo 'Deployment failed!'
+            echo '❌ Deployment failed!'
         }
     }
 }
