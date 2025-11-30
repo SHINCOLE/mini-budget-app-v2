@@ -25,6 +25,12 @@ pipeline {
             }
         }
 
+        stage('Prepare Environment File') {
+            steps {
+                sh 'cp .env .env.local || true'
+            }
+        }
+
         stage('Build Docker Image') {
             steps {
                 sh 'docker compose build --no-cache'
@@ -41,7 +47,7 @@ pipeline {
         stage("Health Check") {
             steps {
                 script {
-                    sleep 8 // allow boot time
+                    sleep 8 
 
                     def status = sh(
                         script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000",
