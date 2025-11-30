@@ -1,44 +1,49 @@
 # ------------------------------
 # 1. Build Stage
 # ------------------------------
-FROM node:20 AS builder
+FROM node:20-slim AS builder
+
 WORKDIR /app
 
-# Avoid interactive prompts and speed up installs
-ENV CI=true
-ENV NPM_CONFIG_UPDATE_NOTIFIER=false
-ENV NPM_CONFIG_FUND=false
-ENV NPM_CONFIG_AUDIT=false
+# Install required system packages (important!)
+RUN apt-get update && apt-get install -y \
+    libc6 \
+    libc6-dev \
+    libstdc++6 \
+    python3 \
+    build-essential \
+    --no-install-recommends && rm -rf /var/lib/apt/lists/*
 
-# Copy lockfile first to leverage Docker cache for npm installs
+# Copy only deps first (for caching)
 COPY package.json package-lock.json ./
 
-# Use prefer-offline and no-audit to speed up CI installs
-RUN npm ci --no-audit --prefer-offline --no-fund
+# Install dependencies cleanly (no cache)
+RUN npm ci
 
-# Copy app source and build
+# Copy all project files
 COPY . .
-# Ensure Next knows to look for .env.local/.env if you need them in build
-# (Your pipeline already copies .env/.env.local before build)
+
+# Build Next.js in standalone mode
 RUN npm run build
 
+
 # ------------------------------
-# 2. Run Stage
+# 2. Runner Stage
 # ------------------------------
-FROM node:20 AS runner
+FROM node:20-slim AS runner
+
 WORKDIR /app
 
 ENV NODE_ENV=production
 ENV PORT=3000
 
-# copy only the Next standalone output + static assets
-# (Next's "standalone" output must be enabled by Next build configuration)
+# Copy the standalone build (this contains server.js + minimal node_modules)
 COPY --from=builder /app/.next/standalone ./
-COPY --from=builder /app/.next/static ./.next/static
+
+# Static assets
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/.next/static ./.next/static
 
 EXPOSE 3000
 
-# If your standalone uses `server.js`, keep node server.js
-# If your app uses a different entrypoint, update accordingly
 CMD ["node", "server.js"]
