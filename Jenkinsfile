@@ -32,6 +32,7 @@ pipeline {
                         echo "Copying environment file..."
                         cp $ENV_FILE .env
                         cp $ENV_FILE .env.local
+                        ls -la
                     '''
                 }
             }
@@ -53,15 +54,16 @@ pipeline {
         stage("Health Check") {
             steps {
                 script {
-                    sleep 8
+                    sleep 8  // wait for container startup
 
+                    // Accept 200, 304, OR 307 redirect (NextAuth redirect)
                     def status = sh(
-                        script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000",
+                        script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/login",
                         returnStdout: true
                     ).trim()
 
-                    if (status != "200" && status != "304") {
-                        error("Health check FAILED → HTTP ${status}")
+                    if (status != "200" && status != "304" && status != "307") {
+                        error("Health check failed. HTTP status: ${status}")
                     }
                 }
             }
@@ -70,10 +72,10 @@ pipeline {
 
     post {
         success {
-            echo '🎉 Deployment succeeded!'
+            echo 'Deployment succeeded!'
         }
         failure {
-            echo '❌ Deployment failed!'
+            echo 'Deployment failed!'
         }
     }
 }
