@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { supabaseClient } from "../../lib/supabaseClient";
 
 import OverviewCards from "./components/OverviewCards";
@@ -11,18 +12,50 @@ import AddIncomeForm from "../../components/AddIncomeForm";
 
 export default function Dashboard() {
   const router = useRouter();
+  const [userEmail, setUserEmail] = useState("");
 
   async function logout() {
     await supabaseClient.auth.signOut();
     router.push("/login");
   }
 
+  // Load logged-in user
+  useEffect(() => {
+    async function getUser() {
+      const { data } = await supabaseClient.auth.getUser();
+      const email = data?.user?.email;
+      if (email) setUserEmail(email);
+    }
+
+    getUser();
+  }, []);
+
+  // Get first letter for avatar
+  const avatarLetter = userEmail ? userEmail.charAt(0).toUpperCase() : "?";
+
   return (
     <div className="max-w-5xl mx-auto p-6 space-y-6">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Dashboard</h1>
+        
+        {/* Dashboard Title + User Display */}
+        <div className="flex items-center gap-4">
+          <h1 className="text-2xl font-bold">Dashboard</h1>
 
+          {userEmail && (
+            <div className="flex items-center gap-2">
+              {/* Avatar */}
+              <div className="w-8 h-8 rounded-full bg-purple-500 text-white flex items-center justify-center font-semibold">
+                {avatarLetter}
+              </div>
+
+              {/* Email */}
+              <p className="text-sm text-gray-700 font-medium">{userEmail}</p>
+            </div>
+          )}
+        </div>
+
+        {/* Buttons */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => router.push("/analytics")}
@@ -38,6 +71,7 @@ export default function Dashboard() {
             Logout
           </button>
         </div>
+
       </div>
 
       {/* Summary Cards */}
@@ -45,13 +79,11 @@ export default function Dashboard() {
 
       {/* Main Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Left Column */}
         <div className="space-y-6">
           <AddExpenseForm />
           <ExpenseList />
         </div>
 
-        {/* Right Column */}
         <div className="space-y-6">
           <AddIncomeForm />
           <IncomeList />
