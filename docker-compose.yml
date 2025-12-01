@@ -1,18 +1,12 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      cache_from:
-        - nextjs-budget-app-app:latest
-
-    image: nextjs-budget-app-app:latest
-
-    env_file:
-      - .env
-      - .env.local
-
+    build: .
+    container_name: budget-app
     ports:
       - "3000:3000"
-
-    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      NEXT_PUBLIC_SUPABASE_URL: https://mivsjqqlfoglkivxbupg.supabase.co
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1pdnNqcXFsZm9nbGtpdnhidXBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTE5NTUsImV4cCI6MjA3OTg4Nzk1NX0.ZVbSAczPazDmATWS_OO-oEN0b7xLSowv9K0YD80iCdA
+    restart: always

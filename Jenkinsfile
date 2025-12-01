@@ -5,12 +5,6 @@ pipeline {
         COMPOSE_PROJECT_NAME = "nextjs-budget-app"
     }
 
-    options {
-        timeout(time: 60, unit: 'MINUTES')
-        buildDiscarder(logRotator(numToKeepStr: '20'))
-        timestamps()
-    }
-
     stages {
 
         stage('Clean Workspace') {
@@ -24,8 +18,8 @@ pipeline {
                 checkout([
                     $class: 'GitSCM',
                     branches: [[name: '*/main']],
-                    userRemoteConfigs: [[ 
-                        url: 'https://github.com/SHINCOLE/mini-budget-app-v2.git' 
+                    userRemoteConfigs: [[
+                        url: 'https://github.com/SHINCOLE/mini-budget-app-v2.git'
                     ]]
                 ])
             }
@@ -38,7 +32,7 @@ pipeline {
                         echo "Copying environment file..."
                         cp $ENV_FILE .env
                         cp $ENV_FILE .env.local
-                        chmod 600 .env .env.local
+                        ls -la
                     '''
                 }
             }
@@ -46,38 +40,30 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                sh '''
-                    echo "Building Docker image..."
-                    docker compose build --no-cache
-                '''
+                sh 'docker compose build --no-cache'
             }
         }
 
         stage('Deploy Application') {
             steps {
-                sh '''
-                    echo "Deploying..."
-                    docker compose down || true
-                    docker compose up -d
-                '''
+                sh 'docker compose down || true'
+                sh 'docker compose up -d'
             }
         }
 
-        stage('Health Check') {
+        stage("Health Check") {
             steps {
                 script {
-                    echo "Waiting for app to start..."
-                    sleep 12
+                    sleep 8  // wait for container startup
 
+                    // Accept 200, 304, OR 307 redirect (NextAuth redirect)
                     def status = sh(
-                        script: 'curl -I -s http://localhost:3000 | head -n 1 | awk "{print \\$2}"',
+                        script: "curl -s -o /dev/null -w \"%{http_code}\" http://localhost:3000/login",
                         returnStdout: true
                     ).trim()
 
-                    echo "HTTP Status: ${status}"
-
-                    if (!(status in ["200","301","302","307"])) {
-                        error("Health check failed → HTTP ${status}")
+                    if (status != "200" && status != "304" && status != "307") {
+                        error("Health check failed. HTTP status: ${status}")
                     }
                 }
             }
@@ -86,10 +72,10 @@ pipeline {
 
     post {
         success {
-            echo "Deployment succeeded!"
+            echo 'Deployment succeeded!'
         }
         failure {
-            echo "Deployment failed!"
+            echo 'Deployment failed!'
         }
     }
 }
